@@ -12,6 +12,7 @@
     "build": "pnpm --recursive build",
     "lint": "pnpm --recursive lint",
     "typecheck": "pnpm --recursive typecheck",
-    "deploy:api": "pnpm --filter api deploy"
+    "deploy:api": "pnpm --filter api run deploy",
+    "deploy:web": "pnpm --filter web run deploy"
   }
 }
