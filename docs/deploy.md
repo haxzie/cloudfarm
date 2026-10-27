@@ -106,10 +106,27 @@ Set two build-time variables on `cloudfarm-web`:
 
 The two Workers are different origins, so after the first deploy set on the API:
 
-- `WEB_URL` — the web Worker's origin, for CORS and auth redirects.
-- `BETTER_AUTH_URL` — the API's own origin.
+Both live in `apps/api/cloudflare.config.ts` as `bindings.text(...)` and point
+at the custom domains:
 
-Both are plain `bindings.text(...)` in `apps/api/cloudflare.config.ts`.
+- `WEB_URL` — `https://cloudfarm.dev`
+- `BETTER_AUTH_URL` — `https://api.cloudfarm.dev`
+
+`.dev.vars` overrides them with localhost for local development.
+
+## Domains
+
+| Host | Worker |
+| --- | --- |
+| `cloudfarm.dev`, `www.cloudfarm.dev` | `cloudfarm-web` |
+| `api.cloudfarm.dev` | `cloudfarm-api` |
+
+Declared as custom-domain routes in each Worker's config, so Cloudflare creates
+the DNS records on deploy. The API gets a subdomain of the same apex rather
+than a `workers.dev` host so the Better Auth session cookie is set on a
+`cloudfarm.dev` origin.
+
+**GitHub OAuth callback:** `https://api.cloudfarm.dev/api/auth/callback/github`
 
 ## Deploying by hand
 

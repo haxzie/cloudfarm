@@ -30,6 +30,9 @@ const self = defineWorker({
   compatibilityFlags: ["nodejs_compat"],
   entrypoint,
   observability: { enabled: true },
+  // Served from the apex's `api` subdomain rather than workers.dev, so the
+  // auth cookie is set on a cloudfarm.dev host and the browser keeps it.
+  routes: [{ pattern: "api.cloudfarm.dev", customDomain: true }],
   exports: {
     // One per bot: conversation, state, tools.
     BotAgent: exports.durableObject({ storage: "sqlite" }),
@@ -45,8 +48,9 @@ export default defineConfig({
     ...self,
 
     env: {
-      BETTER_AUTH_URL: bindings.text("http://localhost:8787"),
-      WEB_URL: bindings.text("http://localhost:3000"),
+      // The deployed origins. Local dev overrides both in .dev.vars.
+      BETTER_AUTH_URL: bindings.text("https://api.cloudfarm.dev"),
+      WEB_URL: bindings.text("https://cloudfarm.dev"),
 
       // S3 view of the R2 bucket, used to mount each bot's folder in its
       // sandbox. The host is <ACCOUNT_ID>.r2.cloudflarestorage.com.

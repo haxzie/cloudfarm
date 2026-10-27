@@ -4,7 +4,7 @@
 BETTER_AUTH_SECRET=
 
 # GitHub OAuth app (https://github.com/settings/developers).
-# Authorization callback URL: http://localhost:8787/api/auth/callback/github
+# Authorization callback URL: http://localhost:8797/api/auth/callback/github
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
 
@@ -15,3 +15,8 @@ ANTHROPIC_API_KEY=
 # sandbox. The sandbox never sees these — the Worker signs every request.
 S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=
+
+# The deployed origins live in cloudflare.config.ts; these override them so
+# local dev talks to the dev servers instead of production.
+WEB_URL=http://localhost:3101
+BETTER_AUTH_URL=http://localhost:8797

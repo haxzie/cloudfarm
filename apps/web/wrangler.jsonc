@@ -9,6 +9,10 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "routes": [
+    { "pattern": "cloudfarm.dev", "custom_domain": true },
+    { "pattern": "www.cloudfarm.dev", "custom_domain": true }
+  ],
   "observability": { "enabled": true }
   // NEXT_PUBLIC_API_URL is deliberately not a var here: Next inlines
   // NEXT_PUBLIC_* at build time, so a runtime binding would never be read.
