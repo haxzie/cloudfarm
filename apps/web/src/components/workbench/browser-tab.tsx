@@ -53,17 +53,29 @@ export function BrowserTab({ capture, targets, log }: Props) {
   /** Whatever tab we are showing, so polls stay on it rather than drifting. */
   const pinned = useRef<string | undefined>(undefined);
 
+  /**
+   * The last frame seen for each tab. Switching shows the cached one straight
+   * away and replaces it when the fresh capture lands, so a click feels
+   * instant instead of waiting on a CDP round trip.
+   */
+  const frames = useRef(new Map<string, Screenshot>());
+
+  const remember = useCallback((next: Screenshot) => {
+    if ("targetId" in next) frames.current.set(next.targetId, next);
+  }, []);
+
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
     inFlight.current = true;
     try {
       const next = await capture(selected ?? pinned.current);
       if ("targetId" in next) pinned.current = next.targetId;
+      remember(next);
       setShot(next);
     } finally {
       inFlight.current = false;
     }
-  }, [capture, selected]);
+  }, [capture, selected, remember]);
 
   useEffect(() => {
     void refresh();
@@ -72,8 +84,53 @@ export function BrowserTab({ capture, targets, log }: Props) {
   }, [refresh]);
 
   useEffect(() => {
-    void targets().then(setTabs);
+    void targets().then((next) =>
+      // Keep the order tabs were first seen in. The CDP target listing is not
+      // ordered, so assigning it straight to state reshuffles the strip on
+      // every poll and the active tab visibly jumps.
+      setTabs((prev) => {
+        const seen = new Map(next.map((tab) => [tab.targetId, tab]));
+        const kept = prev
+          .filter((tab) => seen.has(tab.targetId))
+          .map((tab) => seen.get(tab.targetId)!);
+        const added = next.filter(
+          (tab) => !prev.some((old) => old.targetId === tab.targetId),
+        );
+        return [...kept, ...added];
+      }),
+    );
   }, [targets, shot]);
+
+  /**
+   * Warm each new tab once, so the first switch to it is instant too. Only
+   * once per tab rather than on a loop — every capture is a CDP attach, and a
+   * blank tab is skipped because capturing one makes the server raise it,
+   * which would steal the foreground from the bot.
+   */
+  useEffect(() => {
+    const cold = tabs.find(
+      (tab) =>
+        !frames.current.has(tab.targetId) &&
+        tab.pageUrl &&
+        tab.pageUrl !== "about:blank",
+    );
+    if (!cold || inFlight.current) return;
+
+    let cancelled = false;
+    void (async () => {
+      inFlight.current = true;
+      try {
+        const next = await capture(cold.targetId);
+        if (!cancelled) remember(next);
+      } finally {
+        inFlight.current = false;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tabs, capture, remember]);
 
   const image = shot && "image" in shot ? shot : null;
   // A freshly opened session parks on about:blank; its capture is a white
@@ -99,6 +156,10 @@ export function BrowserTab({ capture, targets, log }: Props) {
                   onClick={() => {
                     pinned.current = tab.targetId;
                     setSelected(tab.targetId);
+                    // Paint the cached frame now; the poll replaces it with a
+                    // fresh one a moment later.
+                    const cached = frames.current.get(tab.targetId);
+                    if (cached) setShot(cached);
                   }}
                   title={tab.pageUrl ?? tab.title}
                   aria-current={isActive ? "page" : undefined}
