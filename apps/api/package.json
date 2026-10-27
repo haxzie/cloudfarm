@@ -1,0 +1,37 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cf dev",
+    "build": "cf build",
+    "deploy": "cf deploy",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "cf workers types",
+    "auth:generate": "pnpm dlx auth@latest generate --config ./auth.config.ts --output ./src/db/auth.schema.ts -y",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "cf d1 migrations apply $CLOUDFARM_D1_ID --dir drizzle --local",
+    "db:migrate:remote": "cf d1 migrations apply $CLOUDFARM_D1_ID --dir drizzle"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.88",
+    "@better-auth/drizzle-adapter": "^1.7.11",
+    "@cloudflare/codemode": "^0.5.2",
+    "@cloudflare/sandbox": "^1.0.3",
+    "@hono/zod-validator": "^0.9.1",
+    "agents": "^0.30.1",
+    "ai": "^7.0.153",
+    "better-auth": "^1.7.11",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.13",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "cf": "^1.0.0-beta.23",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.151.2"
+  }
+}

@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  /* App-wide default text size; Tailwind text-* utilities still override it. */
+  font-size: 14px;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Markdown inside a chat bubble. Deliberately plain: spacing, lists and links,
+ * and nothing else. Code and tables inherit the bubble's colours instead of
+ * carrying their own.
+ */
+.prose-chat > :first-child {
+  margin-top: 0;
+}
+
+.prose-chat > :last-child {
+  margin-bottom: 0;
+}
+
+.prose-chat p,
+.prose-chat ul,
+.prose-chat ol,
+.prose-chat pre,
+.prose-chat blockquote,
+.prose-chat table {
+  margin-block: 0.6em;
+}
+
+.prose-chat ul,
+.prose-chat ol {
+  padding-inline-start: 1.25em;
+}
+
+.prose-chat ul {
+  list-style: disc;
+}
+
+.prose-chat ol {
+  list-style: decimal;
+}
+
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3,
+.prose-chat h4 {
+  margin-block: 0.8em 0.4em;
+  font-weight: 600;
+}
+
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3 {
+  font-size: 1em;
+}
+
+.prose-chat a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose-chat code,
+.prose-chat pre {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.prose-chat :not(pre) > code {
+  border-radius: 0.3em;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  padding: 0.1em 0.35em;
+}
+
+.prose-chat pre {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  padding: 0.7em 0.8em;
+  white-space: pre;
+}
+
+.prose-chat table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.prose-chat th,
+.prose-chat td {
+  padding: 0.25em 0.75em 0.25em 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose-chat th {
+  font-weight: 600;
+}
+
+.prose-chat img {
+  max-width: 100%;
+  height: auto;
+}
+
+.prose-chat blockquote {
+  border-inline-start: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  padding-inline-start: 0.8em;
+}
