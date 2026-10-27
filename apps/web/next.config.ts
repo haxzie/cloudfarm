@@ -8,8 +8,11 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ protocol: "https", hostname: "avatars.githubusercontent.com" }],
   },
-  cacheComponents: true,
-  partialPrefetching: true,
+  // Both are off because Cache Components hangs on Workers: the runtime's
+  // setTimeout makes Next warn "cannot guarantee that Cache Components will
+  // run as expected", then every request is cancelled for never responding.
+  // partialPrefetching requires cacheComponents, so it goes with it.
+  cacheComponents: false,
   turbopack: {
     rules: {
       "*.css": {
