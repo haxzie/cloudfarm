@@ -4,8 +4,14 @@ Two Workers, both built from this repo by **Cloudflare Workers Builds**:
 
 | Worker | Root directory | Build | Deploy |
 | --- | --- | --- | --- |
-| `cloudfarm-api` | `apps/api` | `pnpm install && pnpm run build` | `pnpm exec cf deploy` |
-| `cloudfarm-web` | `apps/web` | `pnpm install && pnpm run build:cf` | `pnpm exec opennextjs-cloudflare deploy` |
+| `cloudfarm-api` | `apps/api` | `pnpm run build` | `pnpm exec cf deploy --prebuilt` |
+| `cloudfarm-web` | `apps/web` | `pnpm run build:cf` | `npx wrangler deploy` |
+
+Workers Builds installs dependencies itself, so the build command is only the
+build. `--prebuilt` makes the API deploy reuse the build output instead of
+rebuilding the container image a second time. The web deploy can stay as plain
+`wrangler deploy`: wrangler detects an OpenNext project and hands off to
+`opennextjs-cloudflare deploy` on its own.
 
 Workers Builds is used rather than GitHub Actions for one concrete reason: the
 API's container image is built from `apps/api/Dockerfile`, and image builds need
