@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cloudfarm-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-19",
+  // OpenNext runs the Next server, which needs Node built-ins.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": { "enabled": true }
+  // NEXT_PUBLIC_API_URL is deliberately not a var here: Next inlines
+  // NEXT_PUBLIC_* at build time, so a runtime binding would never be read.
+  // Set it as a build environment variable (Workers Builds) or in .env.local.
+}
