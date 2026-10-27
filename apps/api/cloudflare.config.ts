@@ -32,7 +32,8 @@ const self = defineWorker({
   observability: { enabled: true },
   // Served from the apex's `api` subdomain rather than workers.dev, so the
   // auth cookie is set on a cloudfarm.dev host and the browser keeps it.
-  routes: [{ pattern: "api.cloudfarm.dev", customDomain: true }],
+  // `domains` is the custom-domain key; `triggers.fetch()` is for routes.
+  domains: ["api.cloudfarm.dev"],
   exports: {
     // One per bot: conversation, state, tools.
     BotAgent: exports.durableObject({ storage: "sqlite" }),
