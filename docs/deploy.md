@@ -4,8 +4,9 @@ Two Workers, both built from this repo by **Cloudflare Workers Builds**:
 
 | Worker | Root directory | Build | Deploy |
 | --- | --- | --- | --- |
-| `cloudfarm-api` | `apps/api` | `pnpm run build` | `pnpm exec cf deploy --prebuilt` |
 | `cloudfarm-web` | `apps/web` | `pnpm run build:cf` | `npx wrangler deploy` |
+
+`cloudfarm-api` is deployed by GitHub Actions, not Workers Builds — see below.
 
 Workers Builds installs dependencies itself, so the build command is only the
 build. `--prebuilt` makes the API deploy reuse the build output instead of
@@ -13,9 +14,18 @@ rebuilding the container image a second time. The web deploy can stay as plain
 `wrangler deploy`: wrangler detects an OpenNext project and hands off to
 `opennextjs-cloudflare deploy` on its own.
 
-Workers Builds is used rather than GitHub Actions for one concrete reason: the
-API's container image is built from `apps/api/Dockerfile`, and image builds need
-a Docker daemon. Cloudflare's builders have one; a bare Actions runner does not.
+**The API does not deploy from Workers Builds.** Cloudflare's builders have no
+Docker daemon, and the API's container image is built from
+`apps/api/Dockerfile`, so the build dies in `verifyDockerInstalled` with
+`run \`sudo systemctl start docker\``. GitHub's ubuntu runners do ship Docker,
+so the API deploys from `.github/workflows/deploy-api.yml` instead. The web
+Worker has no container and builds on Workers Builds fine.
+
+That workflow needs two repository secrets: `CLOUDFLARE_API_TOKEN` (Edit
+Workers template) and `CLOUDFLARE_ACCOUNT_ID`.
+
+Leave the API's Workers Builds trigger disconnected, or every push logs a
+failed build beside the successful Actions run.
 
 ### Always `pnpm run <script>`, never `pnpm <script>`
 
