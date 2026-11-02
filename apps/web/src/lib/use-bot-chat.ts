@@ -4,6 +4,7 @@ import { useAgent } from "agents/react";
 import { useCallback } from "react";
 
 import type {
+  LiveViewTarget,
   BrowserAction,
   BrowserTarget,
   Screenshot,
@@ -55,6 +56,15 @@ export function useBotChat(botId: string) {
     [agent],
   );
 
+  /**
+   * Live View URLs, one per tab. Short-lived bearer credentials (~5 min), so
+   * they are fetched on demand and re-minted rather than stored.
+   */
+  const browserLiveView = useCallback(
+    () => agent.call("browserLiveView") as Promise<LiveViewTarget[]>,
+    [agent],
+  );
+
   const browserTargets = useCallback(
     () => agent.call("browserTargets") as Promise<BrowserTarget[]>,
     [agent],
@@ -76,6 +86,7 @@ export function useBotChat(botId: string) {
   return {
     browserScreenshot,
     browserTargets,
+    browserLiveView,
     listFiles,
     readFile,
     messages: agent.state?.messages ?? [],

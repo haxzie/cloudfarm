@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Loader2, Lock, Search } from "lucide-react";
+import { Globe, Loader2, Lock, MousePointerClick, Search } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type BrowserAction = {
@@ -11,6 +11,14 @@ export type BrowserAction = {
   ok: boolean;
   /** Why it failed. Only set when `ok` is false. */
   error?: string;
+};
+
+export type LiveViewTarget = {
+  targetId: string;
+  /** Embeddable Live View URL. A ~5 minute bearer credential — never stored. */
+  url: string;
+  pageUrl?: string;
+  title?: string;
 };
 
 export type BrowserTarget = {
@@ -27,12 +35,22 @@ export type Screenshot =
 type Props = {
   capture: (targetId?: string) => Promise<Screenshot>;
   targets: () => Promise<BrowserTarget[]>;
+  liveView: () => Promise<LiveViewTarget[]>;
   /** What the bot has done in the browser, newest last. */
   log: BrowserAction[];
 };
 
 /** How often to grab a fresh frame while the tab is visible. */
 const REFRESH_MS = 1500;
+
+/** Live View URLs expire in ~5 minutes; re-mint well inside that. */
+const LIVE_VIEW_REFRESH_MS = 60_000;
+
+/**
+ * Live View renders its own toolbar that cannot be turned off. The iframe is
+ * shifted up by its height so the page meets our URL bar cleanly.
+ */
+const LIVE_VIEW_TOOLBAR_PX = 49;
 
 /**
  * What the bot's browser is looking at, as a stream of screenshots over CDP.
@@ -42,7 +60,7 @@ const REFRESH_MS = 1500;
  * the same picture in development and production, so that is the default; the
  * Live View link stays available for taking control.
  */
-export function BrowserTab({ capture, targets, log }: Props) {
+export function BrowserTab({ capture, targets, liveView, log }: Props) {
   const [shot, setShot] = useState<Screenshot | null>(null);
   const [tabs, setTabs] = useState<BrowserTarget[]>([]);
   const [selected, setSelected] = useState<string | undefined>();
@@ -63,6 +81,35 @@ export function BrowserTab({ capture, targets, log }: Props) {
   const remember = useCallback((next: Screenshot) => {
     if ("targetId" in next) frames.current.set(next.targetId, next);
   }, []);
+
+  /**
+   * Live View URLs keyed by target. Cloudflare streams the page straight to
+   * the iframe, so the Worker is not in the data path and there is no frame
+   * to poll — the screenshot path below is only the fallback.
+   */
+  const [views, setViews] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    const mint = () =>
+      void liveView()
+        .then((next) =>
+          // Keep the URL already in an iframe: swapping src tears the stream
+          // down and reconnects for no reason. Only new tabs get fresh URLs.
+          setViews((prev) => {
+            const merged = new Map<string, string>();
+            for (const target of next) {
+              merged.set(target.targetId, prev.get(target.targetId) ?? target.url);
+            }
+            return merged;
+          }),
+        )
+        .catch(() => {});
+
+    mint();
+    // Comfortably inside the ~5 minute expiry.
+    const timer = setInterval(mint, LIVE_VIEW_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [liveView]);
 
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
@@ -132,7 +179,15 @@ export function BrowserTab({ capture, targets, log }: Props) {
     };
   }, [tabs, capture, remember]);
 
+  const [interactive, setInteractive] = useState(false);
   const image = shot && "image" in shot ? shot : null;
+
+  /** The Live View stream for whichever tab is selected, when there is one. */
+  const activeId = selected ?? image?.targetId ?? tabs[0]?.targetId;
+  const liveUrl = activeId ? views.get(activeId) : undefined;
+  const live = liveUrl
+    ? { targetId: activeId!, url: liveUrl, ...tabs.find((t) => t.targetId === activeId) }
+    : null;
   // A freshly opened session parks on about:blank; its capture is a white
   // rectangle that tells nobody anything.
   const isBlank = !image?.pageUrl || image.pageUrl === "about:blank";
@@ -177,13 +232,39 @@ export function BrowserTab({ capture, targets, log }: Props) {
           )}
         </div>
 
-        <div className="bg-background px-2 py-1.5">
-          <div className="flex min-w-0 items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 dark:bg-neutral-800">
+        <div className="flex items-center gap-2 bg-background px-2 py-1.5">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 dark:bg-neutral-800">
             <Lock className="size-3 shrink-0 text-neutral-500" aria-hidden />
             <span className="min-w-0 flex-1 truncate text-[11px] text-neutral-500">
-              {isBlank ? "Search or type a URL" : image?.pageUrl}
+              {live?.pageUrl ?? (isBlank ? "Search or type a URL" : image?.pageUrl)}
             </span>
           </div>
+
+          {/*
+            Only offered while a stream is up — there is nothing to click on a
+            screenshot. Taking control types into the same browser the bot is
+            using, so it is off until asked for.
+          */}
+          {live && (
+            <button
+              type="button"
+              onClick={() => setInteractive((on) => !on)}
+              aria-pressed={interactive}
+              title={
+                interactive
+                  ? "Give the browser back to the bot"
+                  : "Click and type in the bot's browser"
+              }
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] transition-colors ${
+                interactive
+                  ? "bg-foreground text-background"
+                  : "text-neutral-500 hover:bg-neutral-100 hover:text-foreground dark:hover:bg-neutral-800"
+              }`}
+            >
+              <MousePointerClick className="size-3.5" aria-hidden />
+              {interactive ? "You have control" : "Take control"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -194,24 +275,52 @@ export function BrowserTab({ capture, targets, log }: Props) {
       */}
       <div
         style={ratio ? { aspectRatio: String(ratio) } : undefined}
-        className={`flex max-h-[70%] w-full items-center justify-center overflow-hidden bg-neutral-100 dark:bg-neutral-900 ${
+        className={`relative flex max-h-[70%] w-full items-center justify-center overflow-hidden bg-neutral-100 dark:bg-neutral-900 ${
           ratio ? "shrink-0" : "min-h-0 flex-1"
         }`}
       >
-        {shot === null && <Loader2 className="size-4 animate-spin text-neutral-500" aria-hidden />}
+        {live ? (
+          /*
+            Cloudflare streams the page into this iframe directly, so it is
+            real-time and costs the Worker nothing. Shifted up by the height of
+            Live View's own toolbar, which cannot be hidden — the tab strip and
+            URL bar above stand in for it.
+
+            Not interactive by default: the bot is driving, and a stray click
+            would fight it. "Take control" hands the page over deliberately.
+          */
+          <iframe
+            key={live.targetId}
+            src={live.url}
+            title={live.title || live.pageUrl || "The bot's browser"}
+            allow="clipboard-read; clipboard-write"
+            tabIndex={interactive ? 0 : -1}
+            style={{
+              top: -LIVE_VIEW_TOOLBAR_PX,
+              height: `calc(100% + ${LIVE_VIEW_TOOLBAR_PX}px)`,
+            }}
+            className={`absolute inset-x-0 w-full border-0 bg-white ${
+              interactive ? "" : "pointer-events-none"
+            }`}
+          />
+        ) : null}
+
+        {!live && shot === null && (
+          <Loader2 className="size-4 animate-spin text-neutral-500" aria-hidden />
+        )}
 
         {/*
           No session, or a tab sitting on about:blank. Either way there is no
           page to show, and a blank rectangle reads as broken — so it gets the
           same new-tab page a real browser would be showing.
         */}
-        {shot && ("empty" in shot || isBlank) && <NewTabPage />}
+        {!live && shot && ("empty" in shot || isBlank) && <NewTabPage />}
 
-        {shot && "error" in shot && (
+        {!live && shot && "error" in shot && (
           <p className="px-4 text-center text-xs text-red-500">{shot.error}</p>
         )}
 
-        {image && !isBlank && (
+        {!live && image && !isBlank && (
           // eslint-disable-next-line @next/next/no-img-element -- a base64 frame
           <img
             src={image.image}

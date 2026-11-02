@@ -6,8 +6,10 @@
 import { createDb } from "./src/db";
 import { createAuth } from "./src/lib/auth";
 
+// Through `unknown` because `Env` now carries bindings — Durable Objects, R2,
+// Browser Run — that the CLI has no way to supply and never touches.
 export const auth = createAuth(createDb(null as unknown as D1Database), {
   BETTER_AUTH_SECRET: "cli-placeholder",
-  BETTER_AUTH_URL: "http://localhost:8787",
-  WEB_URL: "http://localhost:3000",
-} as Env);
+  BETTER_AUTH_URL: "http://localhost:8797",
+  WEB_URL: "http://localhost:3101",
+} as unknown as Env);

@@ -495,6 +495,34 @@ export class BotAgent extends Agent<Env, BotAgentState> {
     return this.browserRuntime().connector;
   }
 
+  /**
+   * Live View URLs for the bot's browser, one per tab, minted fresh.
+   *
+   * These are bearer credentials with a ~5 minute window. They go to the
+   * signed-in owner over their own WebSocket and nowhere else: never into
+   * agent state, never into a tool result the model can read, never logged.
+   * The client re-mints rather than storing them.
+   */
+  @callable()
+  async browserLiveView(): Promise<
+    { targetId: string; url: string; pageUrl?: string; title?: string }[]
+  > {
+    const view = await this.browserConnector().liveView({ mode: "tab" });
+    if (!view) return [];
+
+    const pages = view.targets.filter((t) => t.type === undefined || t.type === "page");
+    // Every session opens with a blank tab the bot never uses. Show it only
+    // when there is nothing else, so the panel is not stuck on about:blank.
+    const real = pages.filter((t) => t.pageUrl && t.pageUrl !== "about:blank");
+
+    return (real.length ? real : pages.slice(0, 1)).map((t) => ({
+      targetId: t.targetId,
+      url: t.url,
+      pageUrl: t.pageUrl,
+      title: t.title,
+    }));
+  }
+
   /** Called by the API when the bot's configuration changes in D1. */
   @callable()
   async refreshProfile(): Promise<void> {

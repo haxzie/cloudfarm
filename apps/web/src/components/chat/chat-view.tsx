@@ -28,6 +28,7 @@ export function ChatView({ bot, isInfoOpen, onToggleInfo, onOpenDetails }: Props
     send,
     browserScreenshot,
     browserTargets,
+    browserLiveView,
     browserLog,
     listFiles,
     readFile,
@@ -100,6 +101,7 @@ export function ChatView({ bot, isInfoOpen, onToggleInfo, onOpenDetails }: Props
           readFile={readFile}
           browserScreenshot={browserScreenshot}
           browserTargets={browserTargets}
+          browserLiveView={browserLiveView}
           browserLog={browserLog}
         />
       )}

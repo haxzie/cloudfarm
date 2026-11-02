@@ -7,6 +7,7 @@ import {
   BrowserTab,
   type BrowserAction,
   type BrowserTarget,
+  type LiveViewTarget,
   type Screenshot,
 } from "./browser-tab";
 import type { WorkspaceFile } from "./file-tree";
@@ -24,6 +25,7 @@ type Props = {
   readFile: (path: string) => Promise<{ path: string; content: string } | { error: string }>;
   browserScreenshot: (targetId?: string) => Promise<Screenshot>;
   browserTargets: () => Promise<BrowserTarget[]>;
+  browserLiveView: () => Promise<LiveViewTarget[]>;
   browserLog: BrowserAction[];
 };
 
@@ -38,6 +40,7 @@ export function WorkbenchPanel({
   readFile,
   browserScreenshot,
   browserTargets,
+  browserLiveView,
   browserLog,
 }: Props) {
   const [tab, setTab] = useState<TabId>("files");
@@ -120,6 +123,7 @@ export function WorkbenchPanel({
         <BrowserTab
           capture={browserScreenshot}
           targets={browserTargets}
+          liveView={browserLiveView}
           log={browserLog}
         />
       )}
